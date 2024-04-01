@@ -64,7 +64,7 @@ gitalk:
   enable: true    #是否开启Gitalk评论
   clientID: 204398f70b817aba564e                            #生成的clientID
   clientSecret: d724e54096919c6c96874af3bf82da41b8cfaea5    #生成的clientSecret
-  repo: sumomo.fun    #仓库名称
+  repo: catalysia.github.io    #仓库名称
   owner: catalysia    #github用户名
   admin: catalysia
   distractionFreeMode: true #是否启用类似FB的阴影遮罩
