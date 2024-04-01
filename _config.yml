@@ -5,7 +5,7 @@ header-img: img/home-bg-desk.png
 email: catalysia@gmail.com
 description: "希央香记录所见所闻的一个site"
 keyword: "sobe,黒岩涙香,希央香, iOS, Apple, iPhone"
-url: "http://catalysia.github.io"          # your host, for absolute URL
+url: "https://sumomo.fun/"          # your host, for absolute URL
 baseurl: ""      # for example, '/blog' if your blog hosted on 'host/blog'
 github_repo: "https://github.com/qiubaiying/qiubaiying.github.io.git" # you code repository
 
