@@ -99,16 +99,16 @@ service-worker: true
 # Friends
 friends: [
     {
-        title: "WY",
-        href: "http://zhengwuyang.com"
+        title: "A9VG",
+        href: "https://bbs.a9vg.com/"
     },{
-        title: "简书·BY",
-        href: "http://www.jianshu.com/u/e71990ada2fd"
+        title: "B站",
+        href: "https://space.bilibili.com/519916"
     },{
-        title: "Apple",
-        href: "https://apple.com"
+        title: "i2ex",
+        href: "https://www.v2ex.com/"
     },{
-        title: "Apple Developer",
-        href: "https://developer.apple.com/"
+        title: "张大妈",
+        href: "https://www.smzdm.com/"
     }
 ]
