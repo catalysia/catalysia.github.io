@@ -62,8 +62,8 @@ kramdown:
 # Gitalk
 gitalk:
   enable: true    #是否开启Gitalk评论
-  clientID: cb626ee42b01a35cdaad                            #生成的clientID
-  clientSecret: 58304a45d90fab66545c65ead591a136d2ef1359    #生成的clientSecret
+  clientID: d0de3e817ef3332560ab                            #生成的clientID
+  clientSecret: 3c698d457de53bb9a81964fc1340939b1b05d4dd    #生成的clientSecret
   repo: sumomo.fun    #仓库名称
   owner: catalysia    #github用户名
   admin: catalysia
