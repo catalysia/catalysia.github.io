@@ -1,6 +1,6 @@
 ---
 layout:     post   				    # 使用的布局（不需要改）
-title:      My First Post 				# 标题 
+title:      测试修复 				# 标题 
 subtitle:   Hello World #副标题
 date:       2024-04-01 				# 时间
 author:     catalysia 						# 作者
