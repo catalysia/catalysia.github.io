@@ -17,7 +17,7 @@ sidebar-avatar: /img/Tutorial.webp      # use absolute URL, seeing it's used in 
 
 
 # SNS settings
-RSS: false
+RSS: ture
 weibo_username:     catalysia
 zhihu_username:     catalysia
 github_username:    catalysia
@@ -99,7 +99,7 @@ friends: [
         href: "https://bbs.a9vg.com/"
     },{
         title: "B站",
-        href: "https://space.bilibili.com/519916"
+        href: "https://www.bilibili.com/"
     },{
         title: "i2ex",
         href: "https://www.v2ex.com/"
