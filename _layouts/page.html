@@ -98,17 +98,17 @@ layout: default
                 </section>
                 {% endif %}
 
-                <!-- Short About -->
+                <!-- Short Tutorial -->
                 <section class="visible-md visible-lg">
-                    <hr><h5><a href="{{'/about/' | prepend: site.baseurl }}">ABOUT ME</a></h5>
-                    <div class="short-about">
+                    <hr><h5><a href="{{'/Tutorial/' | prepend: site.baseurl }}">Tutorial</a></h5>
+                    <div class="short-Tutorial">
                         {% if site.sidebar-avatar %}
-                            <a href="{{ site.baseurl }}/about">
+                            <a href="{{ site.baseurl }}/Tutorial">
                                 <img src="{{site.sidebar-avatar}}"/>
                             </a>
                         {% endif %}
-                        {% if site.sidebar-about-description %}
-                            <p>{{site.sidebar-about-description}}</p>
+                        {% if site.sidebar-Tutorial-description %}
+                            <p>{{site.sidebar-Tutorial-description}}</p>
                         {% endif %}
                         <!-- SNS Link -->
                         <ul class="list-inline">
