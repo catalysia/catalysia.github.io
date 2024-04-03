@@ -18,12 +18,12 @@ sidebar-avatar: /img/Tutorial.webp      # use absolute URL, seeing it's used in 
 
 # SNS settings
 RSS: false
-# weibo_username:     catalysia
-# zhihu_username:     catalysia
+weibo_username:     catalysia
+zhihu_username:     catalysia
 github_username:    catalysia
-# facebook_username: catalysia
-# jianshu_username:   catalysia
-# twitter_username:   catalysia
+facebook_username: catalysia
+jianshu_username:   catalysia
+twitter_username:   catalysia
 
 
 
