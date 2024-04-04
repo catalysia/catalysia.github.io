@@ -26,3 +26,9 @@ tags:								#标签
    <input id="inputkey" type="password" /> <button onclick="onbtnDecrypto()">解密</button>
 </div>
 <div id="output"></div>
+
+
+这是一个视频测试：
+
+
+<iframe src="//player.bilibili.com/player.html?aid=96396151&bvid=BV19E41137wj&cid=164564664&p=1" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
