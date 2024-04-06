@@ -51,6 +51,7 @@
     <![endif]-->
 
     <!-- encryptedData -->
+    {% if page.encryptedpost %}
         <script src="/js/aes.js"></script>
         <script>
         function getByteLen(val) {
@@ -98,7 +99,7 @@
               document.getElementById("pwinput").style.display = "none";
             }
         </script>
-
+        {% endif %}
     <!-- ga & ba script hoook -->
     <script></script>
 </head>
