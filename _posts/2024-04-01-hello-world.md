@@ -18,17 +18,11 @@ tags:								#标签
 
 有些时候需要按Ctrl+F5强制刷新，才能看到改变。
 
-有一些需要密码才能访问的Post可能能在这里找到密码。
-
-比如下面这个就是需要一个流传在互联网上的古老的二次元密码。
-
-<div id="pwinput">{{ page.tips | default: "请输入密码:" }}<br />
-   <input id="inputkey" type="password" /> <button onclick="onbtnDecrypto()">解密</button>
-</div>
-<div id="output"></div>
-
 
 这是一个视频测试：
 
-
 <iframe src="//player.bilibili.com/player.html?aid=96396151&bvid=BV19E41137wj&cid=164564664&p=1&autoplay=0" scrolling="no" border="0" frameborder="no" framespacing="0" allowfullscreen="true"> </iframe>
+
+有一些需要密码才能访问的Post可能能在这里找到密码。
+
+比如下面这个就是需要一个流传在互联网上的古老的二次元密码。

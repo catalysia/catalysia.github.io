@@ -59,6 +59,13 @@ layout: default
                 post-container">
 
 				{{ content }}
+                <!-- encryptedData -->
+                {% if page.encryptedpost %}
+                <div id="pwinput">{{ page.tips | default: "请输入密码:" }}<br />
+                    <input id="inputkey" type="password" /> <button onclick="onbtnDecrypto()">解密</button>
+                 </div>
+                 <div id="output"></div>
+                 {% endif %}
 
                 <hr style="visibility: hidden;">
 
@@ -80,7 +87,6 @@ layout: default
                     </li>
                     {% endif %}
                 </ul>
-
 
                 <!--Gitalk评论start  -->
                 {% if site.gitalk.enable %}
