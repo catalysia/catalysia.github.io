@@ -11,7 +11,9 @@ tags:								#标签
     - Windows
     - Tips
 ---
-# Windows 11 每次关机都会提示有应用阻止关机，网上搜索到的解决办法比如修改组策略或者单纯在注册表里增加AutoEndTask=1不能解决问题，于是经过研究有了这篇文章。 #
+Windows 11 每次关机都会提示有应用阻止关机，
+网上搜索到的解决办法比如修改组策略或者单纯在注册表里增加AutoEndTask=1不能解决问题，
+于是经过研究有了这篇文章。 
 
 ## 第一步 ##
 打开注册表，定位到 计算机\HKEY_USERS\.DEFAULT\Control Panel\Desktop
