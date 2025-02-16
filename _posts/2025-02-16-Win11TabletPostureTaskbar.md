@@ -2,7 +2,7 @@
 layout:     post   				    # 使用的布局（不需要改）
 title:      Windows 11 24h2强制平板模式			# 标题 
 subtitle:   2025年2月17日测试有效 #副标题
-date:       2025-02-17 				# 时间
+date:       2025-02-16 				# 时间
 author:     catalysia 						# 作者
 header-img: img/postimg/post-bg-2024-0401.webp 	#这篇文章标题背景图片
 catalog: true 						# 是否归档
