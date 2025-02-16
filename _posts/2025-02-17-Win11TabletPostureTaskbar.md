@@ -23,7 +23,6 @@ Windows 11 24h2更新后**开启Win11平板模式(视频中任务栏)的教程**
 ## 第三步 ##
 使用任务管理器重启资源管理器。
 
-
 <!--加密用代码
 <div id="pwinput">{{ page.tips | default: "请输入密码:" }}<br />
     <input id="inputkey" type="password" /> <button onclick="onbtnDecrypto()">解密</button>
