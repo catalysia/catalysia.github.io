@@ -20,6 +20,9 @@ Windows 11 24h2更新后**开启Win11平板模式(视频中任务栏)的教程**
 ## 第二步 ##
 新建一个名为TabletPostureTaskbar的DWORD32类型值，数据为1。
 
+## 第三步 ##
+使用任务管理器重启资源管理器。
+
 
 <!--加密用代码
 <div id="pwinput">{{ page.tips | default: "请输入密码:" }}<br />
