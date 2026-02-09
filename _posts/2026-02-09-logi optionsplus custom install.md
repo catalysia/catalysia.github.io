@@ -8,7 +8,8 @@ header-img: img/postimg/post-bg-2024-0401.webp 	#这篇文章标题背景图片
 catalog: true 						# 是否归档
 # encryptedpost:                      # 加密内容
 tags:								#标签
-    - Windows
+    - logi
+    - driver
     - Tips
 ---
 安装鼠标驱动罗技Options+，不安装一些没用功能的方法
