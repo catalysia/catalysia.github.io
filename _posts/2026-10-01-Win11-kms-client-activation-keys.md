@@ -1,7 +1,7 @@
 ---
 layout:     post   				    # 使用的布局（不需要改）
-title:      Win11 26H2专业工作站版 KMS激活错误解决方法			# 标题 
-subtitle:    错误: 0x803F7001 在运行 Microsoft Windows 非核心版本的计算机上 #副标题
+title:      Windows 11 26h2 KMS激活错误解决方法			# 标题 
+subtitle:   2026年10月1日测试有效 #副标题
 date:       2026-10-01 				# 时间
 author:     catalysia 						# 作者
 header-img: img/postimg/post-bg-2024-0401.webp 	#这篇文章标题背景图片
