@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>世末艳闻录 编写器</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+<!-- 引入 marked.js 用于 GFM 渲染 -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',system-ui,sans-serif; }
 body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-direction:column; }
@@ -21,7 +23,7 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
 .editor-area { display:flex; flex:1; min-height:0; }
 .editor-col { flex:1; display:flex; flex-direction:column; border-right:1px solid #e0e0e0; }
 .editor-col textarea { flex:1; width:100%; border:none; outline:none; resize:none; padding:16px; font-size:15px; line-height:1.6; font-family:Consolas,monospace; background:#fafafa; }
-.preview-col { flex:1; overflow-y:auto; padding:16px; }
+.preview-col { flex:1; display:flex; flex-direction:column; overflow-y:auto; padding:16px; }
 .preview-col blockquote { border-left:4px solid #1a73e8; padding-left:12px; color:#666; }
 .preview-col img { max-width:100%; }
 .preview-col iframe { max-width:100%; }
@@ -29,6 +31,8 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
 .preview-col th,.preview-col td { border:1px solid #ccc; padding:6px 10px; text-align:left; }
 .preview-col code { background:#f0f0f0; padding:2px 6px; border-radius:3px; font-size:0.9em; }
 .preview-col pre { background:#f5f5f5; padding:12px; border-radius:6px; overflow-x:auto; }
+/* 新增：隐藏单个回车产生的 <br>，使单个回车完全不可见 */
+.preview-col br { display: none; }
 .meta-form { max-width:100%; }
 .form-group { margin-bottom:16px; }
 .form-group label { display:block; font-weight:500; margin-bottom:4px; font-size:14px; }
@@ -61,6 +65,8 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
 .btn-primary { background:#1a73e8; color:#fff; }
 .btn-primary:hover { background:#1557b0; }
 .btn-secondary { background:#f1f3f4; color:#444; }
+.btn-import { background:#81c784; color:#fff; }
+.btn-import:hover { background:#66bb6a; }
 .toggle-row { display:flex; align-items:center; justify-content:space-between; }
 .toggle-label-text { font-weight:500; font-size:14px; color:#444; }
 .toggle-switch { position:relative; display:inline-block; width:44px; height:22px; flex-shrink:0; }
@@ -71,6 +77,10 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
 .toggle-switch input:checked + .slider:before { transform:translateX(22px); }
 .btn-publish { text-decoration:none !important; background-color:#dc3545; color:#fff !important; padding:8px 20px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; font-size:14px; }
 .btn-publish:hover { background-color:#c82333; }
+.enc-preview-wrap { display:none; flex-direction:column; margin-top:16px; border-top:2px solid #e0e0e0; padding-top:8px; }
+.enc-preview-wrap.visible { display:flex; }
+.enc-preview-header { font-size:13px; font-weight:600; color:#444; margin-bottom:6px; }
+.enc-preview-col { flex:1; }
 </style>
 </head>
 <body>
@@ -78,13 +88,13 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
   <div class="ribbon">
     <h1>📝 世末艳闻录 编写器</h1>
     <div style="display:flex; gap:8px; align-items:center; margin-left:auto;">
+      <button class="btn btn-import" onclick="importMD()">📂 导入 .md</button>
       <button class="btn btn-primary" onclick="downloadMD()">⬇ 下载 .md</button>
       <a class="btn btn-publish" href="https://github.com/catalysia/catalysia.github.io/upload/master/_posts" target="_blank" rel="noopener noreferrer">🚀 去发布</a>
     </div>
   </div>
 
   <div class="main">
-    <!-- 左侧：元数据 -->
     <div class="left-pane">
       <div class="meta-form">
         <div class="form-group"><label>标题 *</label><input id="fTitle" placeholder="输入文章标题"></div>
@@ -103,22 +113,23 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
         </div>
 
         <div class="enc-section">
-          <h3>🔐 加密（适配网页端）</h3>
+          <h3>🔐 加密</h3>
           <p style="font-size:12px;color:#888;margin-bottom:6px;">密码：UTF-8 字符串 默认密码为Chobits</p>
           <div class="enc-row">
             <input type="password" id="encPwd" value="Chobits" oninput="updateEncrypt()">
             <button class="btn btn-secondary" onclick="encPwd.value='Chobits';updateEncrypt()">重置</button>
           </div>
           <div class="enc-row"><textarea id="encPlain" placeholder="明文" oninput="updateEncrypt()"></textarea></div>
-          <div class="enc-result" id="encResult">密文（hex，可直接用于 front matter）</div>
+          <div class="enc-result" id="encResult">密文 hex（可直接用于前台解密验证）</div>
           <div style="margin-top:8px;">
-            <button class="btn btn-secondary" onclick="selfTest()">🔍 本页自检（模拟网页端解密）</button>
+            <button class="btn btn-secondary" onclick="selfTest()">🔍 本页自检</button>
             <span id="selfTestMsg" style="margin-left:12px;font-size:13px;"></span>
           </div>
         </div>
 
         <div class="dec-section">
-          <h3>🔓 解密验证（模拟网页端）</h3>
+          <h3>🔓 解密验证</h3>
+          <p style="font-size:12px;color:#888;margin-bottom:6px;">密码：UTF-8 字符串 默认密码为Chobits</p>
           <div class="dec-row">
             <textarea id="decHex" placeholder="密文 hex（encryptedpost 的值）" style="width:100%;min-height:80px;padding:6px 10px;border:1px solid #dadce0;border-radius:4px;font-size:13px;resize:vertical;"></textarea>
           </div>
@@ -131,7 +142,6 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
       </div>
     </div>
 
-    <!-- 右侧：编辑与预览 -->
     <div class="right-pane">
       <div class="toolbar" id="toolbar">
         <button onclick="insertFormat('# ','')">H1</button>
@@ -151,8 +161,14 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
         <button onclick="insertTable()">📊 表格</button>
       </div>
       <div class="editor-area">
-        <div class="editor-col"><textarea id="editor" placeholder="Markdown..."></textarea></div>
-        <div class="preview-col" id="preview"></div>
+        <div class="editor-col"><textarea id="editor" placeholder="Markdown格式 开始编写吧"></textarea></div>
+        <div class="preview-col" id="previewCol">
+          <div id="preview"></div>
+          <div class="enc-preview-wrap" id="encPreviewWrap">
+            <div class="enc-preview-header">🔐 加密内容明文预览（实时）</div>
+            <div class="enc-preview-col" id="encPreview"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -175,7 +191,6 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
     this.value = v;
   });
 
-  /* ========== 密钥派生：补零到 8 的倍数（与网页端完全一致） ========== */
   function deriveKey(pwd){
     var utf8Bytes = CryptoJS.enc.Utf8.parse(pwd);
     var byteLen = utf8Bytes.sigBytes;
@@ -207,14 +222,31 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
     return CryptoJS.enc.Utf8.stringify(decrypted);
   }
 
+  // 使用 marked 进行 GFM 渲染，然后后处理无协议 iframe
+  function renderMarkdown(md){
+    // 配置 marked 为 GFM 模式，开启 breaks 使单个回车变为 <br>（随后被 CSS 隐藏）
+    marked.setOptions({
+      gfm: true,
+      breaks: true,   // 修改为 true：单个回车转为 <br>，不再变成空格
+      smartLists: true,
+      smartypants: false
+    });
+    let html = marked.parse(md);
+    // 后处理：无协议 iframe src 自动补充 https:
+    html = html.replace(/<iframe([^>]*)src=["']\/\/([^"']+)["']([^>]*)>/gi, (match, before, srcPath, after) => {
+      return `<iframe${before}src="https://${srcPath}"${after}>`;
+    });
+    return html;
+  }
+
   window.selfTest = function(){
     const pwd = $('encPwd').value;
     const plain = $('encPlain').value;
-    if(!pwd || !plain){ $('selfTestMsg').textContent = '未输密码或明文'; return; }
+    if(!pwd || !plain){ $('selfTestMsg').textContent = '请输入密码和明文'; return; }
     try {
       const hex = doEncrypt(pwd, plain);
       const back = doDecrypt(pwd, hex);
-      $('selfTestMsg').textContent = (back === plain) ? '✅ 自检OK' : '❌ 解密结果与原文不符';
+      $('selfTestMsg').textContent = (back === plain) ? '✅ 自检正常，已通过' : '❌ 解密结果与原文不符';
     } catch(e){
       $('selfTestMsg').textContent = '❌ 异常：'+e.message;
     }
@@ -236,20 +268,18 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
     }
   };
 
-  // 修改点：使用 UTC 日期（GitHub 服务器时区）
   function setToday(){
-    const utcDate = new Date().toISOString().slice(0,10); // "YYYY-MM-DD" UTC
+    const utcDate = new Date().toISOString().slice(0,10);
     selDate = utcDate;
     $('fDate').value = selDate;
   }
   setToday();
 
-  // 设置文件名初始值为 POST-ON-当前日期时间的CRC32（安全后备）
   (function initFileName(){
     try {
       const now = new Date();
       const timeStr = `${now.getUTCHours().toString().padStart(2,'0')}:${now.getUTCMinutes().toString().padStart(2,'0')}:${now.getUTCSeconds().toString().padStart(2,'0')}`;
-      const input = `${selDate} ${timeStr}`; // selDate 已是 UTC 日期
+      const input = `${selDate} ${timeStr}`;
       let suffix;
       if (typeof CryptoJS.CRC32 === 'function') {
         suffix = CryptoJS.CRC32(input).toString();
@@ -262,16 +292,27 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
     }
   })();
 
-  // 安全的 updateEncrypt（增加错误保护）
   window.updateEncrypt = function(){
     try {
       const p = $('encPwd').value, t = $('encPlain').value;
-      if(!p || !t){ $('encResult').textContent = '请输入密码和明文'; return; }
-      $('encResult').textContent = doEncrypt(p, t);
+      if(!p || !t){ $('encResult').textContent = '请输入密码和明文'; }
+      else { $('encResult').textContent = doEncrypt(p, t); }
+      renderEncPreview();
     } catch(e) {
       $('encResult').textContent = '加密出错：' + e.message;
     }
   };
+
+  function renderEncPreview(){
+    const wrap = $('encPreviewWrap');
+    const txt = $('encPlain').value;
+    if(txt.trim()){
+      wrap.classList.add('visible');
+      $('encPreview').innerHTML = renderMarkdown(txt);
+    } else {
+      wrap.classList.remove('visible');
+    }
+  }
 
   function toggleCalendar(e){ e.stopPropagation(); calVisible?closeCal():openCal(); }
   window.toggleCalendar = toggleCalendar;
@@ -312,7 +353,6 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
   window.insertVideo=()=>{
     let inp=prompt('iframe 或 src'); if(!inp)return;
     let src=inp.match(/src=["']([^"']+)["']/i)?inp.match(/src=["']([^"']+)["']/i)[1]:inp;
-    if(!/^https?:/i.test(src))src='https://'+src;
     insertFormat(`<iframe src="${src}" width="560" height="315" frameborder="0" allowfullscreen></iframe>`,'');
   };
   window.insertTable=()=>{
@@ -321,60 +361,144 @@ body { background:#f5f5f5; color:#333; height:100vh; display:flex; flex-directio
     for(let i=1;i<r;i++) t+='|'+'  |'.repeat(c)+'\n';
     insertFormat(t,'');
   };
-  window.clearFormat=()=>{ const x=getSel(); if(!x.sel)return; let s=x.sel.replace(/\*\*(.+?)\*\*/g,'$1').replace(/`(.+?)`/g,'$1'); editor.setRangeText(s,x.s,x.e,'end'); render(); };
 
   function render(){
-    let md = editor.value;
-    md = md.replace(/!\[([^\]]*)\]\(([^)]+)\)/g,'<img src="$2" alt="$1">');
-    md = md.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank">$1</a>');
-    md = md.replace(/`([^`]+)`/g,'<code>$1</code>');
-    md = md.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
-    md = md.replace(/\*(.+?)\*/g,'<i>$1</i>');
-    md = md.replace(/~~(.+?)~~/g,'<s>$1</s>');
-    md = md.replace(/^#### (.+)$/gm,'<h4>$1</h4>')
-           .replace(/^### (.+)$/gm,'<h3>$1</h3>')
-           .replace(/^## (.+)$/gm,'<h2>$1</h2>')
-           .replace(/^# (.+)$/gm,'<h1>$1</h1>');
-    md = md.replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>');
-    md = md.replace(/^[-*+] (.+)$/gm,'<li>$1</li>');
-    md = md.replace(/^\d+\. (.+)$/gm,'<li>$1</li>');
-    md = md.replace(/^---$/gm,'<hr>');
-    md = md.replace(/(?:^\|.*\|\s*$\n?)+/gm, block => {
-      const rows = block.trim().split('\n').map(line => {
-        const cells = line.slice(1,-1).split('|').map(c => c.trim());
-        if(cells.every(c => /^-+$/.test(c))) return '';
-        return '<tr>'+cells.map(c => `<td>${c}</td>`).join('')+'</tr>';
-      }).filter(Boolean).join('');
-      return `<table border="1" cellspacing="0">${rows}</table>`;
-    });
-    preview.innerHTML = md;
+    preview.innerHTML = renderMarkdown(editor.value);
   }
   editor.addEventListener('input', render);
 
-  /* ========== 下载 MD（自动加密正文） ========== */
   window.downloadMD=()=>{
     const fn=$('fFileName').value.trim(); if(!fn){alert('文件名');return;}
     let enc='';
     const pwd = $('encPwd').value;
     const testPlain = $('encPlain').value;
-
     if(pwd){
       const textToEncrypt = testPlain.trim() ? testPlain : editor.value;
       if(textToEncrypt.trim()){
         enc = doEncrypt(pwd, textToEncrypt);
       }
     }
-
     const tagLine = tags.length? tags.map(t=>'    - '+t).join('\n') : '    - untagged';
     let md=`---\nlayout:     post\ntitle:      ${$('fTitle').value}\nsubtitle:   ${$('fSubtitle').value}\ndate:       ${selDate}\nauthor:     ${$('fAuthor').value}\nheader-img: ${$('fHeaderImg').value}\ncatalog:    ${$('fCatalog').checked}\n${enc?`encryptedpost: ${enc}\n`:''}tags:\n${tagLine}\n---\n\n${editor.value}\n`;
-
     const blob=new Blob([md],{type:'text/markdown;charset=utf-8'});
     const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`${selDate}-${fn}.md`; a.click();
     URL.revokeObjectURL(a.href);
   };
 
-  // 初始化预览
+  window.importMD = function(){
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.md,.markdown';
+    fileInput.onchange = function(e){
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        const content = ev.target.result;
+        const lines = content.split('\n');
+        let fmLines = [], bodyLines = [], inFm = false, fmClosed = false;
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          if (line.trim() === '---') {
+            if (!inFm) { inFm = true; continue; }
+            else { fmClosed = true; continue; }
+          }
+          if (inFm && !fmClosed) fmLines.push(line);
+          else if (fmClosed) bodyLines.push(line);
+        }
+        if (!fmClosed) { bodyLines = lines; fmLines = []; }
+        const body = bodyLines.join('\n');
+        const fmData = {};
+        let currentKey = null, currentValue = [];
+
+        // 修复：解析每一行时先去除行内注释
+        for (const line of fmLines) {
+          // 去除行内注释（# 到行尾），注意保留左侧缩进以便判断缩进层级
+          const cleanLine = line.replace(/#.*$/, '').trimRight();
+          // 如果去除注释后整行为空，跳过
+          if (cleanLine.trim() === '') continue;
+
+          // 判断是否为缩进行（以空格或制表符开头）
+          if (/^\s/.test(cleanLine)) {
+            // 属于当前键的多行值（列表项或续行）
+            currentValue.push(cleanLine.trim());
+          } else {
+            // 可能是新键值对
+            const match = cleanLine.match(/^(\w[\w-]*):\s*(.*)/);
+            if (match) {
+              if (currentKey) fmData[currentKey] = currentValue.join('\n').trim();
+              currentKey = match[1];
+              // 对值也去除注释
+              let val = match[2].replace(/#.*$/, '').trim();
+              currentValue = [val];
+            }
+            // 不匹配则忽略（理论上 front matter 中不会出现）
+          }
+        }
+        // 保存最后一个键的值
+        if (currentKey) fmData[currentKey] = currentValue.join('\n').trim();
+
+        if (fmData.title) $('fTitle').value = fmData.title;
+        if (fmData.subtitle) $('fSubtitle').value = fmData.subtitle;
+        if (fmData.date) { $('fDate').value = fmData.date; selDate = fmData.date; }
+        if (fmData.author) $('fAuthor').value = fmData.author;
+        if (fmData['header-img']) $('fHeaderImg').value = fmData['header-img'];
+        let fileNameRaw = file.name.replace(/\.(md|markdown)$/i, '');
+        $('fFileName').value = fileNameRaw;
+        fFileName.dispatchEvent(new Event('input'));
+        tags = [];
+        if (fmData.tags) {
+          const tagLines = fmData.tags.split('\n');
+          for (const tl of tagLines) {
+            const t = tl.replace(/^-\s*/, '').trim();
+            if (t) tags.push(t);
+          }
+        }
+        renderTags();
+        if (fmData.catalog !== undefined) {
+          const catVal = String(fmData.catalog).toLowerCase();
+          $('fCatalog').checked = (catVal === 'true' || catVal === 'yes' || catVal === '1');
+        }
+        const encryptedHex = fmData.encryptedpost;
+        if (encryptedHex && encryptedHex.trim()) {
+          const defaultPwd = 'Chobits';
+          let decrypted = null;
+          try { decrypted = doDecrypt(defaultPwd, encryptedHex.trim()); } catch(e) {}
+          if (decrypted) {
+            $('encPwd').value = defaultPwd;
+            $('encPlain').value = decrypted;
+          } else {
+            const userPwd = prompt('该文件已加密，但默认密码解密失败。请输入正确的密码：');
+            if (userPwd) {
+              try { decrypted = doDecrypt(userPwd, encryptedHex.trim()); } catch(e) {}
+              if (decrypted) {
+                $('encPwd').value = userPwd;
+                $('encPlain').value = decrypted;
+              } else {
+                alert('密码错误，无法解密。加密内容将不会被导入。');
+                $('encPwd').value = defaultPwd;
+                $('encPlain').value = '';
+              }
+            } else {
+              $('encPwd').value = defaultPwd;
+              $('encPlain').value = '';
+            }
+          }
+        } else {
+          $('encPwd').value = 'Chobits';
+          $('encPlain').value = '';
+        }
+        updateEncrypt();
+        editor.value = body;
+        editor.dispatchEvent(new Event('input'));
+      };
+      reader.readAsText(file);
+    };
+    fileInput.click();
+  };
+
   render();
+  renderEncPreview();
 })();
 </script>
 </body>
