@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>世末艳闻录 编写器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js">
+    </script>
+    <!-- 引入 marked.js 用于 GFM 渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        body {
+            background: #f5f5f5;
+            color: #333;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .ribbon {
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .ribbon h1 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a73e8;
+            margin-right: auto;
+        }
+        .toolbar {
+            background: #fff;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 6px 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .toolbar button {
+            padding: 4px 10px;
+            border: 1px solid #dadce0;
+            background: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .toolbar button:hover {
+            background: #e8f0fe;
+            border-color: #1a73e8;
+        }
+        .toolbar .sep {
+            width: 1px;
+            height: 24px;
+            background: #e0e0e0;
+            margin: 0 4px;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+            background: #fff;
+        }
+        .left-pane {
+            width: 420px;
+            min-width: 320px;
+            overflow-y: auto;
+            padding: 16px;
+            border-right: 1px solid #e0e0e0;
+            flex-shrink: 0;
+        }
+        .right-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+        .editor-area {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+        .editor-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e0e0e0;
+        }
+        .editor-col textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            padding: 16px;
+            font-size: 15px;
+            line-height: 1.6;
+            font-family: Consolas, monospace;
+            background: #fafafa;
+        }
+        .preview-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .preview-col blockquote {
+            border-left: 4px solid #1a73e8;
+            padding-left: 12px;
+            color: #666;
+        }
+        .preview-col img {
+            max-width: 100%;
+        }
+        .preview-col iframe {
+            max-width: 100%;
+        }
+        .preview-col table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 8px 0;
+        }
+        .preview-col th,
+        .preview-col td {
+            border: 1px solid #ccc;
+            padding: 6px 10px;
+            text-align: left;
+        }
+        .preview-col code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        .preview-col pre {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+        /* 隐藏单个回车产生的 <br> */
+        .preview-col br {
+            display: none;
+        }
+        .meta-form {
+            max-width: 100%;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #dadce0;
+            border-radius: 6px;
+            font-size: 14px;
+            outline: none;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, .15);
+        }
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 8px 0;
+        }
+        .tag {
+            background: #e8f0fe;
+            color: #1a73e8;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            display: inline-flex;
+            gap: 4px;
+        }
+        .tag .rm {
+            cursor: pointer;
+            color: #999;
+            font-weight: bold;
+        }
+        .calendar-popup {
+            position: fixed;
+            z-index: 1000;
+            background: #fff;
+            border: 1px solid #dadce0;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, .15);
+            padding: 12px;
+            width: 280px;
+        }
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .cal-header button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+            text-align: center;
+        }
+        .cal-cell {
+            padding: 6px 0;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .cal-cell:hover {
+            background: #e8f0fe;
+        }
+        .cal-cell.empty {
+            visibility: hidden;
+        }
+        .cal-cell.today {
+            background: #1a73e8;
+            color: #fff;
+        }
+        .cal-cell.selected {
+            background: #1a73e8;
+            color: #fff;
+        }
+        .cal-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+        .cal-footer button {
+            padding: 4px 12px;
+            border: 1px solid #dadce0;
+            background: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .enc-section {
+            margin-top: 16px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .enc-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        .enc-row input,
+        .enc-row textarea {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .enc-row textarea {
+            min-height: 60px;
+            resize: vertical;
+        }
+        .enc-result {
+            background: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            word-break: break-all;
+            border: 1px solid #dadce0;
+            min-height: 40px;
+        }
+        .dec-section {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .dec-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        .dec-row input {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .dec-result {
+            background: #fff;
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            word-break: break-all;
+            border: 1px solid #dadce0;
+            min-height: 40px;
+            white-space: pre-wrap;
+        }
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-primary {
+            background: #1a73e8;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #1557b0;
+        }
+        .btn-secondary {
+            background: #f1f3f4;
+            color: #444;
+        }
+        .btn-import {
+            background: #81c784;
+            color: #fff;
+        }
+        .btn-import:hover {
+            background: #66bb6a;
+        }
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .toggle-label-text {
+            font-weight: 500;
+            font-size: 14px;
+            color: #444;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 22px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .2s;
+            border-radius: 22px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 2px;
+            bottom: 2px;
+            background-color: #fff;
+            transition: .2s;
+            border-radius: 50%;
+        }
+        .toggle-switch input:checked+.slider {
+            background-color: #1a73e8;
+        }
+        .toggle-switch input:checked+.slider:before {
+            transform: translateX(22px);
+        }
+        .btn-publish {
+            text-decoration: none !important;
+            background-color: #dc3545;
+            color: #fff !important;
+            padding: 8px 20px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 14px;
+        }
+        .btn-publish:hover {
+            background-color: #c82333;
+        }
+        .enc-preview-wrap {
+            display: none;
+            flex-direction: column;
+            margin-top: 16px;
+            border-top: 2px solid #e0e0e0;
+            padding-top: 8px;
+        }
+        .enc-preview-wrap.visible {
+            display: flex;
+        }
+        .enc-preview-header {
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 6px;
+        }
+        .enc-preview-col {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="ribbon">
+            <h1>📝 世末艳闻录 编写器</h1>
+            <div style="display:flex; gap:8px; align-items:center; margin-left:auto;">
+                <button class="btn btn-import" onclick="importMD()">📂 导入 .md</button>
+                <button class="btn btn-primary" onclick="downloadMD()">⬇ 下载 .md</button>
+                <a class="btn btn-publish" href="https://github.com/catalysia/catalysia.github.io/upload/master/_posts" target="_blank" rel="noopener noreferrer">🚀 去发布</a>
+            </div>
+        </div>
+
+        <div class="main">
+            <div class="left-pane">
+                <div class="meta-form">
+                    <div class="form-group"><label>标题 *</label><input id="fTitle" placeholder="输入文章标题"></div>
+                    <div class="form-group"><label>副标题 *</label><input id="fSubtitle" placeholder="输入文章副标题"></div>
+                    <div class="form-group"><label>发布日期 *</label><input id="fDate" placeholder="点击选择 YYYY-MM-DD" onclick="toggleCalendar(event)"></div>
+                    <div class="form-group"><label>作者 *</label><input id="fAuthor" value="Catalysia"></div>
+                    <div class="form-group"><label>头图URL *</label><input id="fHeaderImg" value="img/postimg/post-bg-2024-0401.webp"></div>
+                    <div class="form-group"><label>文件名 *</label><input id="fFileName" placeholder="第一个字符必须是英文字母，如 hello-world"></div>
+                    <div class="form-group"><label>标签（Enter 添加）</label><input id="fTagInput" onkeydown="if(event.key==='Enter'){event.preventDefault();addTag()}"><div class="tag-container" id="tagContainer"></div></div>
+                    <div class="toggle-row">
+                        <span class="toggle-label-text">启用归档</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="fCatalog" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="enc-section">
+                        <h3>🔐 加密</h3>
+                        <p style="font-size:12px;color:#888;margin-bottom:6px;">密码：UTF-8 字符串 默认密码为Chobits</p>
+                        <div class="enc-row">
+                            <input type="password" id="encPwd" value="Chobits" oninput="updateEncrypt()">
+                            <button class="btn btn-secondary" onclick="encPwd.value='Chobits';updateEncrypt()">重置</button>
+                        </div>
+                        <div class="enc-row"><textarea id="encPlain" placeholder="明文" oninput="updateEncrypt()"></textarea></div>
+                        <div class="enc-result" id="encResult">密文 hex（可直接用于前台解密验证）</div>
+                        <div style="margin-top:8px;">
+                            <button class="btn btn-secondary" onclick="selfTest()">🔍 本页自检</button>
+                            <span id="selfTestMsg" style="margin-left:12px;font-size:13px;"></span>
+                        </div>
+                    </div>
+
+                    <div class="dec-section">
+                        <h3>🔓 解密验证</h3>
+                        <p style="font-size:12px;color:#888;margin-bottom:6px;">密码：UTF-8 字符串 默认密码为Chobits</p>
+                        <div class="dec-row">
+                            <textarea id="decHex" placeholder="密文 hex（encryptedpost 的值）" style="width:100%;min-height:80px;padding:6px 10px;border:1px solid #dadce0;border-radius:4px;font-size:13px;resize:vertical;"></textarea>
+                        </div>
+                        <div class="dec-row">
+                            <input type="password" id="decPwd" placeholder="密码" value="Chobits">
+                            <button class="btn btn-secondary" onclick="doDecryptUI()">解密</button>
+                        </div>
+                        <div class="dec-result" id="decResult">解密结果将显示在此处</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-pane">
+                <div class="toolbar" id="toolbar">
+                    <button onclick="insertFormat('# ','')">H1</button>
+                    <button onclick="insertFormat('## ','')">H2</button>
+                    <button onclick="insertFormat('### ','')">H3</button>
+                    <div class="sep"></div>
+                    <button onclick="wrapText('**','**')"><b>B</b></button>
+                    <button onclick="wrapText('*','*')"><i>I</i></button>
+                    <button onclick="wrapText('~~','~~')"><s>S</s></button>
+                    <button onclick="wrapText('> ','')">引用</button>
+                    <button onclick="wrapText('`','`')">代码</button>
+                    <button onclick="wrapText('- ','')">列表</button>
+                    <div class="sep"></div>
+                    <button onclick="insertLink()">🔗 链接</button>
+                    <button onclick="insertImage()">🖼 图片</button>
+                    <button onclick="insertVideo()">🎬 视频</button>
+                    <button onclick="insertTable()">📊 表格</button>
+                </div>
+                <div class="editor-area">
+                    <div class="editor-col"><textarea id="editor" placeholder="Markdown格式 开始编写吧"></textarea></div>
+                    <div class="preview-col" id="previewCol">
+                        <div id="preview"></div>
+                        <div class="enc-preview-wrap" id="encPreviewWrap">
+                            <div class="enc-preview-header">🔐 加密内容明文预览（实时）</div>
+                            <div class="enc-preview-col" id="encPreview"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="calendar-popup" id="calPopup" style="display:none;"></div>
+
+    <script>
+        (function() {
+            let tags = [],
+                selDate = '',
+                calVisible = false;
+            const $ = id => document.getElementById(id);
+            const editor = $('editor'),
+                preview = $('preview'),
+                toolbar = $('toolbar');
+
+            const fFileName = $('fFileName');
+            fFileName.addEventListener('input', function() {
+                let v = this.value
+                    .replace(/\s+/g, '-')
+                    .replace(/[^a-zA-Z0-9\-_.]/g, '');
+                while (v.length > 0 && !/^[a-zA-Z]/.test(v)) { v = v.slice(1); }
+                this.value = v;
+            });
+
+            function deriveKey(pwd) {
+                var utf8Bytes = CryptoJS.enc.Utf8.parse(pwd);
+                var byteLen = utf8Bytes.sigBytes;
+                var paddedPwd = pwd;
+                while (byteLen % 8 !== 0) {
+                    paddedPwd += "\0";
+                    byteLen++;
+                }
+                return CryptoJS.enc.Utf8.parse(paddedPwd);
+            }
+
+            function doEncrypt(pwd, txt) {
+                const key = deriveKey(pwd);
+                const encrypted = CryptoJS.AES.encrypt(txt, key, {
+                    mode: CryptoJS.mode.ECB,
+                    padding: CryptoJS.pad.Pkcs7
+                });
+                return encrypted.ciphertext.toString(CryptoJS.enc.Hex);
+            }
+
+            function doDecrypt(pwd, hexCipher) {
+                const key = deriveKey(pwd);
+                const wordArray = CryptoJS.enc.Hex.parse(hexCipher);
+                const base64Cipher = CryptoJS.enc.Base64.stringify(wordArray);
+                const decrypted = CryptoJS.AES.decrypt(base64Cipher, key, {
+                    mode: CryptoJS.mode.ECB,
+                    padding: CryptoJS.pad.Pkcs7
+                });
+                return CryptoJS.enc.Utf8.stringify(decrypted);
+            }
+
+            function renderMarkdown(md) {
+                marked.setOptions({ gfm: true, breaks: true, smartLists: true, smartypants: false });
+                let html = marked.parse(md);
+                html = html.replace(/<iframe([^>]*)src=["']\/\/([^"']+)["']([^>]*)>/gi, (match, before, srcPath, after) => {
+                    return `<iframe${before}src="https://${srcPath}"${after}>`;
+                });
+                return html;
+            }
+
+            window.selfTest = function() {
+                const pwd = $('encPwd').value;
+                const plain = $('encPlain').value;
+                if (!pwd || !plain) { $('selfTestMsg').textContent = '请输入密码和明文'; return; }
+                try {
+                    const hex = doEncrypt(pwd, plain);
+                    const back = doDecrypt(pwd, hex);
+                    $('selfTestMsg').textContent = (back === plain) ? '✅ 自检正常，已通过' : '❌ 解密结果与原文不符';
+                } catch (e) {
+                    $('selfTestMsg').textContent = '❌ 异常：' + e.message;
+                }
+            };
+
+            window.doDecryptUI = function() {
+                const hex = $('decHex').value.trim();
+                const pwd = $('decPwd').value;
+                if (!hex || !pwd) { $('decResult').textContent = '请填写密文和密码'; return; }
+                try {
+                    const plain = doDecrypt(pwd, hex);
+                    if (plain) {
+                        $('decResult').textContent = plain;
+                    } else {
+                        $('decResult').textContent = '解密失败：密文或密码错误';
+                    }
+                } catch (e) {
+                    $('decResult').textContent = '解密异常：' + e.message;
+                }
+            };
+
+            function setToday() {
+                const utcDate = new Date().toISOString().slice(0, 10);
+                selDate = utcDate;
+                $('fDate').value = selDate;
+            }
+            setToday();
+
+            (function initFileName() {
+                try {
+                    const now = new Date();
+                    const timeStr = `${now.getUTCHours().toString().padStart(2,'0')}:${now.getUTCMinutes().toString().padStart(2,'0')}:${now.getUTCSeconds().toString().padStart(2,'0')}`;
+                    const input = `${selDate} ${timeStr}`;
+                    let suffix;
+                    if (typeof CryptoJS.CRC32 === 'function') {
+                        suffix = CryptoJS.CRC32(input).toString();
+                    } else {
+                        suffix = Date.now().toString(16);
+                    }
+                    $('fFileName').value = `POST-ON-${suffix}`;
+                } catch (e) {
+                    $('fFileName').value = `POST-ON-${Date.now().toString(16)}`;
+                }
+            })();
+
+            window.updateEncrypt = function() {
+                try {
+                    const p = $('encPwd').value,
+                        t = $('encPlain').value;
+                    if (!p || !t) { $('encResult').textContent = '请输入密码和明文'; } else { $('encResult').textContent = doEncrypt(p, t); }
+                    renderEncPreview();
+                } catch (e) {
+                    $('encResult').textContent = '加密出错：' + e.message;
+                }
+            };
+
+            function renderEncPreview() {
+                const wrap = $('encPreviewWrap');
+                const txt = $('encPlain').value;
+                if (txt.trim()) {
+                    wrap.classList.add('visible');
+                    $('encPreview').innerHTML = renderMarkdown(txt);
+                } else {
+                    wrap.classList.remove('visible');
+                }
+            }
+
+            function toggleCalendar(e) { e.stopPropagation();
+                calVisible ? closeCal() : openCal(); }
+            window.toggleCalendar = toggleCalendar;
+
+            function openCal() { calVisible = true;
+                renderCal();
+                document.addEventListener('click', outside, true); }
+
+            function closeCal() { calVisible = false;
+                $('calPopup').style.display = 'none';
+                document.removeEventListener('click', outside, true); }
+
+            function outside(e) { if (!$('calPopup').contains(e.target) && e.target !== $('fDate')) closeCal(); }
+
+            function renderCal(y, m) {
+                const d = selDate ? new Date(selDate) : new Date();
+                if (y === undefined) { y = d.getFullYear();
+                    m = d.getMonth(); }
+                const fd = new Date(y, m, 1).getDay(),
+                    dim = new Date(y, m + 1, 0).getDate();
+                let h = `<div class="cal-header"><button onclick="renderCal(${y},${m-1})">‹</button><strong>${y}年${m+1}月</strong><button onclick="renderCal(${y},${m+1})">›</button></div><div class="cal-grid"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>`;
+                for (let i = 0; i < fd; i++) h += '<span class="cal-cell empty"></span>';
+                for (let day = 1; day <= dim; day++) {
+                    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                    let c = 'cal-cell';
+                    if (ds === selDate) c += ' selected';
+                    h += `<span class="${c}" onclick="pickDate('${ds}')">${day}</span>`;
+                }
+                h += '</div><div class="cal-footer"><button onclick="pickDate(\'' + selDate + '\')">今天</button><button onclick="clearDate()">清除</button></div>';
+                const p = $('calPopup');
+                p.innerHTML = h;
+                p.style.display = 'block';
+                const r = $('fDate').getBoundingClientRect();
+                p.style.left = r.left + 'px';
+                p.style.top = (r.bottom + 4) + 'px';
+            }
+            window.renderCal = renderCal;
+            window.pickDate = ds => { selDate = ds;
+                $('fDate').value = ds;
+                closeCal(); };
+            window.clearDate = () => { selDate = '';
+                $('fDate').value = '';
+                closeCal(); };
+
+            window.addTag = () => { const v = $('fTagInput').value.trim(); if (!v || tags.includes(v)) return;
+                tags.push(v);
+                $('fTagInput').value = '';
+                renderTags(); };
+            window.removeTag = i => { tags.splice(i, 1);
+                renderTags(); };
+
+            function renderTags() { $('tagContainer').innerHTML = tags.map((t, i) =>
+                `<span class="tag">${t}<span class="rm" onclick="removeTag(${i})">×</span></span>`).join(''); }
+
+            // ---------- 核心修复：多行格式处理 ----------
+            function getSel() { return { s: editor.selectionStart, e: editor.selectionEnd, sel: editor.value.substring(
+                        editor.selectionStart, editor.selectionEnd) }; }
+
+            /**
+             * 通用插入格式函数：处理多行选择
+             * @param {string} prefix 每行前加的前缀（如 '# ', '> ', '- ', '`'）
+             * @param {string} suffix 每行后加的后缀（如 '`', ''）
+             * @param {boolean} isInline 是否为行内格式（如 **, *, ~~）—— 如果是行内，则整个选区包裹一次；否则逐行处理
+             * @param {boolean} perLine 是否每行独立包裹（用于代码块：每行首尾各加一个符号）
+             */
+            function applyFormat(prefix, suffix, isInline, perLine) {
+                const { s, e, sel } = getSel();
+                if (!sel) {
+                    const insertion = prefix + suffix;
+                    editor.setRangeText(insertion, s, s, 'end');
+                    editor.focus();
+                    return;
+                }
+
+                if (isInline) {
+                    // 行内格式：整体包裹一次
+                    editor.setRangeText(prefix + sel + suffix, s, e, 'end');
+                    editor.focus();
+                    return;
+                }
+
+                const lines = sel.split('\n');
+
+                if (perLine) {
+                    // 每一行的首尾各加 prefix/suffix（用于多行代码块，每个 ` 占一行包裹）
+                    const processed = lines.map(line => {
+                        if (line === '') return line; // 空行保留
+                        return prefix + line + suffix;
+                    }).join('\n');
+                    editor.setRangeText(processed, s, e, 'end');
+                    editor.focus();
+                    return;
+                }
+
+                // 普通块级（标题/引用/列表）：前缀加在每行开头
+                const processed = lines.map(line => {
+                    if (line.trim() === '') return line;
+                    return prefix + line + suffix;
+                }).join('\n');
+                editor.setRangeText(processed, s, e, 'end');
+                editor.focus();
+            }
+
+            // 改写原有的 insertFormat / wrapText 指向新的 applyFormat
+            window.insertFormat = function(b, a) {
+                // 判断是否为行内格式
+                const isInline = (b === '**' || b === '*' || b === '~~' || b === '`');
+                // 代码按钮的特殊处理：perLine 由外部调用时决定，这里默认 false
+                // 但为了兼容工具栏直接调用，我们通过 rebindToolbar 重新绑定
+                applyFormat(b, a, isInline, false);
+            };
+            window.wrapText = window.insertFormat;
+
+            // 重新绑定工具栏按钮，确保每个按钮调用正确的格式
+            function rebindToolbar() {
+                const btns = toolbar.querySelectorAll('button');
+                // 按照顺序：H1, H2, H3, B, I, S, 引用, 代码, 列表
+                const actions = [
+                    { prefix: '# ',  suffix: '',  inline: false, perLine: false },
+                    { prefix: '## ', suffix: '',  inline: false, perLine: false },
+                    { prefix: '### ',suffix: '',  inline: false, perLine: false },
+                    { prefix: '**',  suffix: '**',inline: true,  perLine: false },
+                    { prefix: '*',   suffix: '*', inline: true,  perLine: false },
+                    { prefix: '~~',  suffix: '~~',inline: true,  perLine: false },
+                    { prefix: '> ',  suffix: '',  inline: false, perLine: false },
+                    { prefix: '`',   suffix: '`', inline: false, perLine: true  }, // 代码：每行首尾各一个 `
+                    { prefix: '- ',  suffix: '',  inline: false, perLine: false },
+                ];
+                for (let i = 0; i < 9 && i < btns.length; i++) {
+                    const act = actions[i];
+                    btns[i].onclick = function() {
+                        applyFormat(act.prefix, act.suffix, act.inline, act.perLine);
+                        editor.focus();
+                    };
+                }
+                // 链接、图片、视频、表格 按钮保持原有绑定，不做修改
+            }
+            rebindToolbar();
+
+            // 渲染预览
+            function render() {
+                preview.innerHTML = renderMarkdown(editor.value);
+            }
+            editor.addEventListener('input', render);
+
+            // ---------- 修复下载：加密字段只在有密码和明文时才写入 ----------
+            window.downloadMD = () => {
+                const fn = $('fFileName').value.trim();
+                if (!fn) { alert('文件名不能为空'); return; }
+                let enc = '';
+                const pwd = $('encPwd').value;
+                const testPlain = $('encPlain').value;
+                // 只有当密码和明文都非空时才加密
+                if (pwd && testPlain.trim()) {
+                    enc = doEncrypt(pwd, testPlain);
+                }
+                const tagLine = tags.length ? tags.map(t => '    - ' + t).join('\n') : '    - untagged';
+                let md = `---\nlayout:     post\ntitle:      ${$('fTitle').value}\nsubtitle:   ${$('fSubtitle').value}\ndate:       ${selDate}\nauthor:     ${$('fAuthor').value}\nheader-img: ${$('fHeaderImg').value}\ncatalog:    ${$('fCatalog').checked}\n`;
+                // 只在有加密内容时写入 encryptedpost
+                if (enc) {
+                    md += `encryptedpost: ${enc}\n`;
+                }
+                md += `tags:\n${tagLine}\n---\n\n${editor.value}\n`;
+                const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${selDate}-${fn}.md`;
+                a.click();
+                URL.revokeObjectURL(a.href);
+            };
+
+            // 导入功能保持不变（已包含加密字段读取逻辑）
+            window.importMD = function() {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '.md,.markdown';
+                fileInput.onchange = function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = function(ev) {
+                        const content = ev.target.result;
+                        const lines = content.split('\n');
+                        let fmLines = [],
+                            bodyLines = [],
+                            inFm = false,
+                            fmClosed = false;
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i];
+                            if (line.trim() === '---') {
+                                if (!inFm) { inFm = true; continue; } else { fmClosed = true; continue; }
+                            }
+                            if (inFm && !fmClosed) fmLines.push(line);
+                            else if (fmClosed) bodyLines.push(line);
+                        }
+                        if (!fmClosed) { bodyLines = lines;
+                            fmLines = []; }
+                        let body = bodyLines.join('\n');
+                        body = body.replace(/^\n+|\n+$/g, '');  // 去掉首尾多余的换行
+                        const fmData = {};
+                        let currentKey = null,
+                            currentValue = [];
+                        for (const line of fmLines) {
+                            const cleanLine = line.replace(/#.*$/, '').trimRight();
+                            if (cleanLine.trim() === '') continue;
+                            if (/^\s/.test(cleanLine)) {
+                                currentValue.push(cleanLine.trim());
+                            } else {
+                                const match = cleanLine.match(/^(\w[\w-]*):\s*(.*)/);
+                                if (match) {
+                                    if (currentKey) fmData[currentKey] = currentValue.join('\n').trim();
+                                    currentKey = match[1];
+                                    let val = match[2].replace(/#.*$/, '').trim();
+                                    currentValue = [val];
+                                }
+                            }
+                        }
+                        if (currentKey) fmData[currentKey] = currentValue.join('\n').trim();
+
+                        if (fmData.title) $('fTitle').value = fmData.title;
+                        if (fmData.subtitle) $('fSubtitle').value = fmData.subtitle;
+                        if (fmData.date) { $('fDate').value = fmData.date;
+                            selDate = fmData.date; }
+                        if (fmData.author) $('fAuthor').value = fmData.author;
+                        if (fmData['header-img']) $('fHeaderImg').value = fmData['header-img'];
+                        let fileNameRaw = file.name.replace(/\.(md|markdown)$/i, '');
+                        $('fFileName').value = fileNameRaw;
+                        fFileName.dispatchEvent(new Event('input'));
+                        tags = [];
+                        if (fmData.tags) {
+                            const tagLines = fmData.tags.split('\n');
+                            for (const tl of tagLines) {
+                                const t = tl.replace(/^-\s*/, '').trim();
+                                if (t) tags.push(t);
+                            }
+                        }
+                        renderTags();
+                        if (fmData.catalog !== undefined) {
+                            const catVal = String(fmData.catalog).toLowerCase();
+                            $('fCatalog').checked = (catVal === 'true' || catVal === 'yes' || catVal === '1');
+                        }
+                        const encryptedHex = fmData.encryptedpost;
+                        if (encryptedHex && encryptedHex.trim()) {
+                            const defaultPwd = 'Chobits';
+                            let decrypted = null;
+                            try { decrypted = doDecrypt(defaultPwd, encryptedHex.trim()); } catch (e) {}
+                            if (decrypted) {
+                                $('encPwd').value = defaultPwd;
+                                $('encPlain').value = decrypted;
+                            } else {
+                                const userPwd = prompt('该文件已加密，但默认密码解密失败。请输入正确的密码：');
+                                if (userPwd) {
+                                    try { decrypted = doDecrypt(userPwd, encryptedHex.trim()); } catch (e) {}
+                                    if (decrypted) {
+                                        $('encPwd').value = userPwd;
+                                        $('encPlain').value = decrypted;
+                                    } else {
+                                        alert('密码错误，无法解密。加密内容将不会被导入。');
+                                        $('encPwd').value = defaultPwd;
+                                        $('encPlain').value = '';
+                                    }
+                                } else {
+                                    $('encPwd').value = defaultPwd;
+                                    $('encPlain').value = '';
+                                }
+                            }
+                        } else {
+                            $('encPwd').value = 'Chobits';
+                            $('encPlain').value = '';
+                        }
+                        updateEncrypt();
+                        editor.value = body;
+                        editor.dispatchEvent(new Event('input'));
+                    };
+                    reader.readAsText(file);
+                };
+                fileInput.click();
+            };
+
+            // 初始渲染
+            render();
+            renderEncPreview();
+        })();
+    </script>
+</body>
+</html>
