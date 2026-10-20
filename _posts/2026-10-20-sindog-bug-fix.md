@@ -1,0 +1,38 @@
+---
+layout:     post
+title:      签到狗自定义脚本
+subtitle:   无法自动执行的bug修复
+date:       2026-10-20
+author:     Catalysia
+header-img: img/postimg/post-bg-2024-0401.webp
+catalog:    true
+encryptedpost: b44f405831787a0e4937b898b22a98d0a86b8b2d2d72427e3d4e330f1cc2e888c850b953884895f2b7ba8089d8c07af7c94f1071baa5c4647bf4a22639ea6d1aed1992fcfdcd4efa7e3f5cd0974c0c340fc924d957bfdea23508e24c9c16c0749c3e53874f53ddf37feb24120a1742abc683e49626af60dc284ce8bbb22117528a0dd5236b3ba5df4c1aabe089ed4c242729448046534e20f51c32969b9ce21af727c4b8aa8f3fc8768c846f2e206ee517b81c2f6a32a0c9f70ad619fd28f79967a35fce8c566193d03cf6e98cf9cbf49ac613698f8424d9519a0c8897225dec8007ff3344e3b39b4df43396af452274611f4290d3ed21790a02ef80f200870e0591db18b1c2e52ca03fba6023a18c836695eb85e592bcd5de629575505857cda922fa72a3115c65f51af804c62d2a40b6296a7d572b63de1d4f04b98c2cf29cc5c19f4055104d63b6f98307a8c73ebcddc3a590e45581311ba6c0837f30a41a0a725736699d3847a43e911f7bc7bfc0e55cf91d4f162250ddfad89b91d0d28d10ba4de13e2a61525e2c8607c43b111fae842a4f24599f85ef68f378c4ed4ea48822c81774d752fa7c50d5add1caa2af3cbabd1b1243738b36b8819bdce251271a93b16a4f313cc67938e1a9128a8611a70c75861caf44e6c2ce255833a7191b87b3cb1f151dca557172f418ae6b3dbb97ba876211ae5df3e278cdae009826aad299901add3dac796d747d543b2ed38e4c402d28af7848f48236d8fa62d0acaff5d8dada3233b8d6fdbafc0332991607dd2a06165a1d06c411518f006a6e748b0bc4e5b43aabbf7e60072c17b73074b512213b8e86c52f85b20d78545919126dcbbe10e3e04ca4e6001927305b2e172176fe191bc18a39f872624b5a77cbc926574d68fc132e23d6f74d46e31266e8ec250fee11ac4fd84c2c644bdd7f1ec61212f15ce0d72e3843baa53ad0e247ac6d1e74925c16225dac227f1e36b0e4bc34005100915db8380be33adb75c33e989b97faaa9b133cd003e13fac357d26457328269aad77156afe8e5f408b10e5b48930f8a305fb910aea64d8cca2ee5b77a5a903731622ff7bade419d97be8d5f06bf2ba0ea76cd39c3fbc459e7c90b3f4ee5b034b9fb7b06d33560f8475efa65e83e2cf49ba0cf37e80a21b6266ddd4ee8fc498afd09c4819c4dc43855addec77589b2884819e7dfa204ef80f2b297a9b632f6327b9863cdb5591ac9ee822ef7a566fe984ca213736381526b982ddb6e5d7c9f3b66c8cd057827611c05a61ea003e
+tags:
+    - 路由器
+    - koolshare
+---
+
+直接上传的自定义脚本会上传到 **/jffs/.koolshare/configs/signdog/qd_store/scripts/1/** 文件夹。
+但是自动执行时要求的目录是 **/jffs/.koolshare/configs/signdog/qd_store/scripts/1/** 。
+
+此时自动执行就会提示：
+
+`node:internal/modules/cjs/loader:1143
+  throw err;
+  ^
+
+Error: Cannot find module '/jffs/.koolshare/configs/signdog/脚本名.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1140:15)
+    at Module._load (node:internal/modules/cjs/loader:981:27)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:128:12)
+    at node:internal/main/run_main_module:28:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v18.20.2
+exit status 1`
+
+**所以需要将两者连接起来**
+
+`ln -sf /jffs/.koolshare/configs/signdog/qd_store/scripts/1/脚本名.js /jffs/.koolshare/configs/signdog/脚本名.js`
